@@ -1,0 +1,6 @@
+{
+  "name": "DuoPlay: Game Real-Time 2 Player",
+  "description": "Game interaktif real-time 2 player: Tebak Bendera, Tebak Kata, Tebak Emoji Panggilan Suara, Uji Kecocokan, dan Refleks Cepat dengan skor tersinkronisasi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
