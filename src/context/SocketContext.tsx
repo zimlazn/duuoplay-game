@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { RoomState, GameType } from '../types/game';
+import { RoomState, GameType, UnoColor } from '../types/game';
 import { sound } from '../utils/sound';
 
 export interface ChatMessage {
@@ -29,11 +29,36 @@ interface SocketContextType {
   createRoom: (nickname: string, avatar: string) => void;
   joinRoom: (roomId: string, nickname: string, avatar: string) => void;
   setReady: (isReady: boolean) => void;
-  selectGameType: (gameType: GameType, totalRounds?: number) => void;
+  selectGameType: (gameType: GameType, totalRounds?: number, startImmediately?: boolean) => void;
+  setTotalRounds: (rounds: number) => void;
   startGame: () => void;
   rematch: () => void;
   submitAnswer: (data: any) => void;
   submitReflexTap: (timestamp: number) => void;
+
+  // New Games
+  submitTicTacToeMove: (index: number) => void;
+  playUnoCard: (cardId: string, chosenColor?: UnoColor) => void;
+  drawUnoCard: () => void;
+  callUno: () => void;
+  passUnoTurn: () => void;
+  rollLudoDice: () => void;
+  moveLudoToken: (tokenId: number) => void;
+
+  // Pause & Exit
+  togglePause: () => void;
+  requestExit: () => void;
+  cancelExit: () => void;
+  leaveRoom: () => void;
+
+  // Speed Typing
+  submitTypingProgress: (progressPercent: number, charsTyped: number, wpm: number, accuracy: number, isFinished: boolean) => void;
+
+  // Find & Mark (Cari & Coret)
+  setFindAndMarkTargetNumber: (targetNumber: number) => void;
+  markFindAndMarkCell: (cellIndex: number) => void;
+  submitFindAndMarkSeekerGuess: (guessedNumber: number) => void;
+
   sendReaction: (emoji: string) => void;
   sendChatMessage: (message: string) => void;
   chatMessages: ChatMessage[];
@@ -67,7 +92,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   useEffect(() => {
-    // Connect to same origin
     const newSocket = io({
       transports: ['polling', 'websocket'],
       reconnectionAttempts: 10,
@@ -95,7 +119,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     newSocket.on('room:updated', (updatedRoom: RoomState) => {
       setRoom(updatedRoom);
 
-      // Sound triggers on state transitions
       if (updatedRoom.gameState.status === 'countdown' && prevStatusRef.current !== 'countdown') {
         sound.playTick();
       }
@@ -119,10 +142,30 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     newSocket.on('game:countdown_tick', ({ countdown }: { countdown: number }) => {
+      setRoom(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          gameState: {
+            ...prev.gameState,
+            countdown
+          }
+        };
+      });
       sound.playTick();
     });
 
     newSocket.on('game:time_update', ({ timeLeft }: { timeLeft: number }) => {
+      setRoom(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          gameState: {
+            ...prev.gameState,
+            timeLeft
+          }
+        };
+      });
       if (timeLeft <= 3 && timeLeft > 0) {
         sound.playTick();
       }
@@ -135,7 +178,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     newSocket.on('reaction:broadcast', (reaction: ReactionItem) => {
       sound.playPop();
       setFloatingReactions(prev => [...prev.slice(-15), reaction]);
-      // Auto-remove reaction after 3 seconds
       setTimeout(() => {
         setFloatingReactions(prev => prev.filter(r => r.id !== reaction.id));
       }, 3000);
@@ -148,6 +190,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     newSocket.on('room:error', ({ message }: { message: string }) => {
       setError(message);
       sound.playWrong();
+    });
+
+    newSocket.on('room:left', () => {
+      setRoom(null);
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/');
+      }
     });
 
     return () => {
@@ -174,10 +223,17 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [socket]);
 
-  const selectGameType = useCallback((gameType: GameType, totalRounds: number = 5) => {
+  const selectGameType = useCallback((gameType: GameType, totalRounds: number = 5, startImmediately: boolean = false) => {
     if (socket) {
       sound.playClick();
-      socket.emit('game:select_type', { gameType, totalRounds });
+      socket.emit('game:select_type', { gameType, totalRounds, startImmediately });
+    }
+  }, [socket]);
+
+  const setTotalRounds = useCallback((rounds: number) => {
+    if (socket) {
+      sound.playClick();
+      socket.emit('game:set_rounds', { totalRounds: rounds });
     }
   }, [socket]);
 
@@ -208,6 +264,135 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [socket]);
 
+  // Tic Tac Toe
+  const submitTicTacToeMove = useCallback((index: number) => {
+    if (socket) {
+      sound.playClick();
+      socket.emit('tictactoe:move', { index });
+    }
+  }, [socket]);
+
+  // UNO
+  const playUnoCard = useCallback((cardId: string, chosenColor?: UnoColor) => {
+    if (socket) {
+      sound.playCardPlay();
+      socket.emit('uno:play_card', { cardId, chosenColor });
+    }
+  }, [socket]);
+
+  const drawUnoCard = useCallback(() => {
+    if (socket) {
+      sound.playCardDraw();
+      socket.emit('uno:draw_card');
+    }
+  }, [socket]);
+
+  const callUno = useCallback(() => {
+    if (socket) {
+      sound.playCorrect();
+      socket.emit('uno:call_uno');
+    }
+  }, [socket]);
+
+  const passUnoTurn = useCallback(() => {
+    if (socket) {
+      sound.playClick();
+      socket.emit('uno:pass_turn');
+    }
+  }, [socket]);
+
+  // LUDO
+  const rollLudoDice = useCallback(() => {
+    if (socket) {
+      sound.playDiceRoll();
+      socket.emit('ludo:roll_dice');
+    }
+  }, [socket]);
+
+  const moveLudoToken = useCallback((tokenId: number) => {
+    if (socket) {
+      sound.playClick();
+      socket.emit('ludo:move_token', { tokenId });
+    }
+  }, [socket]);
+
+  // Pause & Exit
+  const togglePause = useCallback(() => {
+    if (socket) {
+      sound.playClick();
+      socket.emit('game:pause_toggle');
+    }
+  }, [socket]);
+
+  const requestExit = useCallback(() => {
+    if (socket) {
+      sound.playClick();
+      socket.emit('game:exit_request');
+    }
+  }, [socket]);
+
+  const cancelExit = useCallback(() => {
+    if (socket) {
+      sound.playClick();
+      socket.emit('game:exit_cancel');
+    }
+  }, [socket]);
+
+  const leaveRoom = useCallback(() => {
+    if (socket) {
+      sound.playClick();
+      socket.emit('room:leave');
+      setRoom(null);
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/');
+      }
+    }
+  }, [socket]);
+
+  const submitTypingProgress = useCallback(
+    (progressPercent: number, charsTyped: number, wpm: number, accuracy: number, isFinished: boolean) => {
+      if (socket) {
+        socket.emit('typing:progress', {
+          progressPercent,
+          charsTyped,
+          wpm,
+          accuracy,
+          isFinished
+        });
+      }
+    },
+    [socket]
+  );
+
+  const setFindAndMarkTargetNumber = useCallback(
+    (targetNumber: number) => {
+      if (socket) {
+        sound.playClick();
+        socket.emit('find_and_mark:set_target_number', { targetNumber });
+      }
+    },
+    [socket]
+  );
+
+  const markFindAndMarkCell = useCallback(
+    (cellIndex: number) => {
+      if (socket) {
+        sound.playTick();
+        socket.emit('find_and_mark:mark_cell', { cellIndex });
+      }
+    },
+    [socket]
+  );
+
+  const submitFindAndMarkSeekerGuess = useCallback(
+    (guessedNumber: number) => {
+      if (socket) {
+        socket.emit('find_and_mark:seeker_guess', { guessedNumber });
+      }
+    },
+    [socket]
+  );
+
   const sendReaction = useCallback((emoji: string) => {
     if (socket) {
       socket.emit('reaction:send', { emoji });
@@ -237,10 +422,26 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         joinRoom,
         setReady,
         selectGameType,
+        setTotalRounds,
         startGame,
         rematch,
         submitAnswer,
         submitReflexTap,
+        submitTicTacToeMove,
+        playUnoCard,
+        drawUnoCard,
+        callUno,
+        passUnoTurn,
+        rollLudoDice,
+        moveLudoToken,
+        togglePause,
+        requestExit,
+        cancelExit,
+        leaveRoom,
+        submitTypingProgress,
+        setFindAndMarkTargetNumber,
+        markFindAndMarkCell,
+        submitFindAndMarkSeekerGuess,
         sendReaction,
         sendChatMessage,
         chatMessages,

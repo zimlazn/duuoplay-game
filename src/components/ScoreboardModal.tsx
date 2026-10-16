@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSocket } from '../context/SocketContext';
-import { Trophy, Award, CheckCircle2, X } from 'lucide-react';
+import { Trophy, CheckCircle2, X } from 'lucide-react';
 
 interface ScoreboardModalProps {
   isOpen: boolean;
@@ -10,7 +10,18 @@ interface ScoreboardModalProps {
 export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({ isOpen, onClose }) => {
   const { room, playerId } = useSocket();
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !room) return null;
+
+  const isPinkTheme = room.roomId === 'ACAA' || room.isSpecialTheme;
 
   const playerIds = Object.keys(room.players);
   const p1 = playerIds[0] ? room.players[playerIds[0]] : null;
@@ -20,161 +31,222 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({ isOpen, onClos
   const p2IsLeader = p1 && p2 && p2.score > p1.score;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fade-in">
-      <div className="relative w-full max-w-lg bg-white border-2 border-zinc-900 rounded-3xl shadow-[6px_6px_0px_#18181b] overflow-hidden flex flex-col max-h-[85vh]">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in cursor-pointer"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className={`relative w-full max-w-lg border-2 rounded-3xl overflow-hidden flex flex-col max-h-[85vh] cursor-default transition-all ${
+          isPinkTheme
+            ? 'bg-pink-50 border-pink-500 shadow-[6px_6px_0px_#f472b6] text-pink-950'
+            : 'bg-white dark:bg-zinc-900 border-zinc-900 dark:border-zinc-700 shadow-[6px_6px_0px_#18181b]'
+        }`}
+      >
         {/* Header */}
-        <div className="p-4 border-b-2 border-zinc-900 flex items-center justify-between bg-amber-100">
+        <div
+          className={`p-4 border-b-2 flex items-center justify-between ${
+            isPinkTheme
+              ? 'bg-pink-200 border-pink-400 text-pink-950'
+              : 'bg-amber-100 dark:bg-amber-950/80 border-zinc-900 dark:border-zinc-700'
+          }`}
+        >
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-white border-2 border-zinc-900 shadow-[2px_2px_0px_#18181b]">
-              <Trophy className="w-5 h-5 text-amber-700" />
+            <div
+              className={`p-2 rounded-xl border-2 ${
+                isPinkTheme ? 'bg-white border-pink-500' : 'bg-white dark:bg-zinc-800 border-zinc-900'
+              }`}
+            >
+              <Trophy className={`w-5 h-5 ${isPinkTheme ? 'text-pink-600' : 'text-amber-700 dark:text-amber-400'}`} />
             </div>
             <div>
-              <h2 className="text-base font-black text-zinc-900 flex items-center gap-2">
+              <h2 className="text-base font-black flex items-center gap-2">
                 Papan Skor Bersama
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-200 border border-zinc-900 text-emerald-950">
+                <span
+                  className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${
+                    isPinkTheme
+                      ? 'bg-pink-300 border-pink-600 text-pink-950'
+                      : 'bg-emerald-200 dark:bg-emerald-900 border-zinc-900 text-emerald-950 dark:text-emerald-200'
+                  }`}
+                >
                   Live
                 </span>
               </h2>
-              <p className="text-xs text-zinc-600 font-medium">Skor dan riwayat babak terkini</p>
+              <p className={`text-xs font-medium ${isPinkTheme ? 'text-pink-800' : 'text-zinc-600 dark:text-zinc-400'}`}>
+                Skor dan riwayat babak terkini
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl bg-white border-2 border-zinc-900 shadow-[2px_2px_0px_#18181b] text-zinc-800 hover:bg-zinc-100 active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
+            className={`p-1.5 rounded-xl border-2 active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all cursor-pointer ${
+              isPinkTheme
+                ? 'bg-white hover:bg-pink-100 border-pink-500 text-pink-900 shadow-[2px_2px_0px_#f472b6]'
+                : 'bg-white dark:bg-zinc-800 border-zinc-900 shadow-[2px_2px_0px_#18181b] text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100'
+            }`}
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Content Body */}
-        <div className="p-5 overflow-y-auto space-y-4 bg-[#FAF8F5]">
-          {/* Head to Head Duel Cards */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Player 1 Card (Lilac Pastel) */}
-            {p1 && (
+        {/* Total Points Cards */}
+        <div
+          className={`p-4 border-b-2 grid grid-cols-2 gap-3 ${
+            isPinkTheme
+              ? 'bg-pink-100/70 border-pink-400'
+              : 'bg-[#F7F5F0] dark:bg-zinc-850 border-zinc-900 dark:border-zinc-700'
+          }`}
+        >
+          {p1 && (
+            <div
+              className={`p-3.5 rounded-2xl border-2 flex flex-col items-center relative ${
+                isPinkTheme
+                  ? 'bg-white border-pink-400 shadow-[3px_3px_0px_#f472b6]'
+                  : p1IsLeader
+                  ? 'bg-amber-100 dark:bg-amber-950/70 border-amber-600 shadow-[3px_3px_0px_#18181b]'
+                  : 'bg-white dark:bg-zinc-800 border-zinc-900 shadow-[3px_3px_0px_#18181b]'
+              }`}
+            >
+              {p1IsLeader && (
+                <span className="absolute -top-2.5 -right-2 text-xl" title="Memimpin">
+                  👑
+                </span>
+              )}
+              <span className="text-2xl mb-1">{p1.avatar}</span>
+              <span className="text-xs font-black truncate max-w-full">
+                {p1.nickname} {p1.id === playerId ? '(Kamu)' : ''}
+              </span>
               <div
-                className={`p-4 rounded-2xl border-2 border-zinc-900 transition ${
-                  p1IsLeader
-                    ? 'bg-purple-100 shadow-[3px_3px_0px_#18181b]'
-                    : 'bg-white shadow-[2px_2px_0px_#18181b]'
+                className={`text-2xl font-mono font-black mt-1 ${
+                  isPinkTheme ? 'text-pink-600' : 'text-purple-700 dark:text-purple-400'
                 }`}
               >
-                {p1IsLeader && (
-                  <div className="inline-block bg-amber-200 border border-zinc-900 text-amber-950 text-[10px] font-black uppercase px-2 py-0.5 rounded-md mb-2">
-                    Memimpin ⭐
-                  </div>
-                )}
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-2xl">{p1.avatar}</span>
-                  <div className="truncate">
-                    <p className="text-xs font-black text-zinc-900 truncate">
-                      {p1.nickname} {p1.id === playerId ? '(Kamu)' : ''}
-                    </p>
-                    <p className="text-[10px] text-zinc-600 font-bold flex items-center gap-1">
-                      <Award className="w-3 h-3 text-amber-600" /> {p1.totalWins} Trofi
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-2 text-center py-2 bg-white rounded-xl border-2 border-zinc-900">
-                  <span className="text-2xl font-black text-purple-900 font-mono">{p1.score}</span>
-                  <span className="text-[10px] text-zinc-500 ml-1 font-bold">poin</span>
-                </div>
+                {p1.score}
               </div>
-            )}
+              <span className={`text-[10px] font-bold ${isPinkTheme ? 'text-pink-600' : 'text-zinc-500 dark:text-zinc-400'}`}>
+                Total Poin
+              </span>
+            </div>
+          )}
 
-            {/* Player 2 Card (Mint Pastel) */}
-            {p2 ? (
+          {p2 && (
+            <div
+              className={`p-3.5 rounded-2xl border-2 flex flex-col items-center relative ${
+                isPinkTheme
+                  ? 'bg-white border-pink-400 shadow-[3px_3px_0px_#f472b6]'
+                  : p2IsLeader
+                  ? 'bg-amber-100 dark:bg-amber-950/70 border-amber-600 shadow-[3px_3px_0px_#18181b]'
+                  : 'bg-white dark:bg-zinc-800 border-zinc-900 shadow-[3px_3px_0px_#18181b]'
+              }`}
+            >
+              {p2IsLeader && (
+                <span className="absolute -top-2.5 -right-2 text-xl" title="Memimpin">
+                  👑
+                </span>
+              )}
+              <span className="text-2xl mb-1">{p2.avatar}</span>
+              <span className="text-xs font-black truncate max-w-full">
+                {p2.nickname} {p2.id === playerId ? '(Kamu)' : ''}
+              </span>
               <div
-                className={`p-4 rounded-2xl border-2 border-zinc-900 transition ${
-                  p2IsLeader
-                    ? 'bg-emerald-100 shadow-[3px_3px_0px_#18181b]'
-                    : 'bg-white shadow-[2px_2px_0px_#18181b]'
+                className={`text-2xl font-mono font-black mt-1 ${
+                  isPinkTheme ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-400'
                 }`}
               >
-                {p2IsLeader && (
-                  <div className="inline-block bg-amber-200 border border-zinc-900 text-amber-950 text-[10px] font-black uppercase px-2 py-0.5 rounded-md mb-2">
-                    Memimpin ⭐
-                  </div>
-                )}
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-2xl">{p2.avatar}</span>
-                  <div className="truncate">
-                    <p className="text-xs font-black text-zinc-900 truncate">
-                      {p2.nickname} {p2.id === playerId ? '(Kamu)' : ''}
-                    </p>
-                    <p className="text-[10px] text-zinc-600 font-bold flex items-center gap-1">
-                      <Award className="w-3 h-3 text-amber-600" /> {p2.totalWins} Trofi
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-2 text-center py-2 bg-white rounded-xl border-2 border-zinc-900">
-                  <span className="text-2xl font-black text-emerald-900 font-mono">{p2.score}</span>
-                  <span className="text-[10px] text-zinc-500 ml-1 font-bold">poin</span>
-                </div>
+                {p2.score}
               </div>
-            ) : (
-              <div className="p-4 rounded-2xl border-2 border-dashed border-zinc-300 bg-white flex flex-col items-center justify-center text-center">
-                <span className="text-2xl opacity-40">⏳</span>
-                <p className="text-xs text-zinc-500 font-bold mt-1">Menunggu Lawan...</p>
-              </div>
-            )}
-          </div>
-
-          {/* History of Rounds */}
-          <div>
-            <h3 className="text-xs font-black text-zinc-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-zinc-800" />
-              Riwayat Babak ({room.roundHistory.length} Babak)
-            </h3>
-
-            {room.roundHistory.length === 0 ? (
-              <div className="p-4 rounded-2xl bg-white border-2 border-zinc-200 text-center text-xs text-zinc-500 font-medium">
-                Belum ada babak yang selesai. Mulai bermain untuk mencatat skor!
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {room.roundHistory.map((rh) => (
-                  <div
-                    key={rh.roundNumber}
-                    className="p-3 rounded-2xl bg-white border-2 border-zinc-900 shadow-[2px_2px_0px_#18181b] flex flex-col gap-1 text-xs"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-black text-zinc-900 flex items-center gap-1.5">
-                        <span className="w-5 h-5 rounded-md bg-purple-100 text-purple-950 border border-zinc-900 flex items-center justify-center text-[11px] font-black">
-                          {rh.roundNumber}
-                        </span>
-                        Babak {rh.roundNumber}
-                      </span>
-                      <span
-                        className={`font-black px-2 py-0.5 rounded-lg border border-zinc-900 text-[10px] ${
-                          rh.winnerPlayerId === 'draw'
-                            ? 'bg-amber-100 text-amber-950'
-                            : 'bg-emerald-100 text-emerald-950'
-                        }`}
-                      >
-                        {rh.winnerPlayerId === 'draw' ? 'Seri' : `Pemenang: ${rh.winnerName}`}
-                      </span>
-                    </div>
-                    {rh.details && (
-                      <p className="text-[11px] text-zinc-600 mt-0.5 leading-relaxed font-medium">
-                        {rh.details}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+              <span className={`text-[10px] font-bold ${isPinkTheme ? 'text-pink-600' : 'text-zinc-500 dark:text-zinc-400'}`}>
+                Total Poin
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
-        <div className="p-3 border-t-2 border-zinc-900 bg-white flex justify-end">
-          <button
-            onClick={onClose}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-black text-xs shadow-[2px_2px_0px_#18181b] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
+        {/* Round History List */}
+        <div className="p-4 overflow-y-auto space-y-2 flex-1 no-scrollbar">
+          <h3
+            className={`text-xs font-black uppercase tracking-wider mb-2 ${
+              isPinkTheme ? 'text-pink-800' : 'text-zinc-600 dark:text-zinc-400'
+            }`}
           >
-            Tutup
-          </button>
+            Riwayat Babak Permainan ({room.roundHistory.length} Babak)
+          </h3>
+
+          {room.roundHistory.length === 0 ? (
+            <div
+              className={`p-8 text-center text-xs font-bold rounded-2xl border-2 border-dashed ${
+                isPinkTheme
+                  ? 'bg-pink-100/50 border-pink-300 text-pink-800'
+                  : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400'
+              }`}
+            >
+              Belum ada babak yang diselesaikan. Mainkan satu babak sekarang!
+            </div>
+          ) : (
+            room.roundHistory.map((rh, idx) => {
+              const isWinnerMe = rh.winnerPlayerId === playerId;
+              const isDraw = rh.winnerPlayerId === 'draw';
+
+              return (
+                <div
+                  key={idx}
+                  className={`p-3 rounded-2xl border-2 flex items-center justify-between gap-3 text-xs ${
+                    isPinkTheme
+                      ? 'bg-white border-pink-400 shadow-[2px_2px_0px_#f472b6]'
+                      : 'bg-white dark:bg-zinc-800 border-zinc-900 dark:border-zinc-700 shadow-[2px_2px_0px_#18181b]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-6 h-6 rounded-lg border flex items-center justify-center font-mono font-black text-xs ${
+                        isPinkTheme
+                          ? 'bg-pink-100 border-pink-400 text-pink-900'
+                          : 'bg-zinc-100 dark:bg-zinc-700 border-zinc-900 text-zinc-800 dark:text-zinc-200'
+                      }`}
+                    >
+                      {rh.roundNumber}
+                    </span>
+                    <div>
+                      <div className="font-black flex items-center gap-1.5">
+                        {isDraw ? (
+                          <span className={isPinkTheme ? 'text-pink-700' : 'text-zinc-600 dark:text-zinc-300'}>
+                            🤝 Babak Seri
+                          </span>
+                        ) : isWinnerMe ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Kamu Menang (+15)
+                          </span>
+                        ) : (
+                          <span className={isPinkTheme ? 'text-pink-700 font-bold' : 'text-purple-600 dark:text-purple-400 font-bold'}>
+                            🏆 {rh.winnerName} Menang
+                          </span>
+                        )}
+                      </div>
+                      {rh.details && (
+                        <p
+                          className={`text-[11px] mt-0.5 line-clamp-1 ${
+                            isPinkTheme ? 'text-pink-800' : 'text-zinc-500 dark:text-zinc-400'
+                          }`}
+                        >
+                          {rh.details}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="text-right font-mono font-black text-xs shrink-0">
+                    <span className={isPinkTheme ? 'text-pink-700' : 'text-purple-700 dark:text-purple-400'}>
+                      {rh.player1Score}
+                    </span>
+                    <span className="text-zinc-400 mx-1">:</span>
+                    <span className={isPinkTheme ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-400'}>
+                      {rh.player2Score}
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>
