@@ -13,7 +13,8 @@ import {
   LogOut,
   Menu,
   X,
-  Sparkles
+  Sparkles,
+  Smartphone
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -31,6 +32,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [copied, setCopied] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showIosInstallModal, setShowIosInstallModal] = useState(false);
 
   // STRICT DEFAULT: Light Theme (false)
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -228,6 +230,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Voice Call WA</span>
             </button>
 
+            {/* Install iPhone App (.mobileconfig) Button */}
+            <button
+              onClick={() => setShowIosInstallModal(true)}
+              title="Install App for iPhone (.mobileconfig)"
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border-2 text-xs font-bold active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all cursor-pointer ${
+                isPinkTheme
+                  ? 'bg-purple-200 hover:bg-purple-300 text-purple-950 border-purple-400 shadow-[2px_2px_0px_#c084fc]'
+                  : 'bg-indigo-100 dark:bg-indigo-950/80 hover:bg-indigo-200 text-indigo-950 dark:text-indigo-200 border-zinc-900 dark:border-indigo-700 shadow-[2px_2px_0px_#18181b]'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5 text-indigo-700 dark:text-indigo-300" />
+              <span>Install iPhone</span>
+            </button>
+
             {/* Scoreboard Drawer */}
             {room && (
               <button
@@ -388,6 +404,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Voice Call WhatsApp</span>
             </button>
 
+            {/* Install iPhone (.mobileconfig) */}
+            <button
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                setShowIosInstallModal(true);
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-xs font-bold text-left transition-colors cursor-pointer"
+            >
+              <span className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-zinc-900">
+                <Smartphone className="w-3.5 h-3.5" />
+              </span>
+              <span>Install App for iPhone</span>
+            </button>
+
             {/* Dark Mode Toggle */}
             {!isPinkTheme ? (
               <button
@@ -507,6 +537,68 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Ya, Keluar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL INSTALL IPHONE (.mobileconfig) */}
+      {showIosInstallModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div
+            className={`max-w-md w-full p-6 rounded-3xl border-3 border-zinc-900 shadow-[6px_6px_0px_#18181b] animate-scale-up ${
+              isPinkTheme
+                ? 'bg-pink-50 text-pink-950'
+                : 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2.5 rounded-2xl bg-indigo-100 text-indigo-700 border-2 border-zinc-900 shadow-xs">
+                  <Smartphone className="w-6 h-6" />
+                </span>
+                <div>
+                  <h3 className="font-black text-lg leading-tight">Install DuoPlay di iPhone</h3>
+                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                    via iOS Web Clip Profile (.mobileconfig)
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowIosInstallModal(false)}
+                className="p-1.5 rounded-xl border-2 border-zinc-900 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-zinc-700 dark:text-zinc-300 mb-5 leading-relaxed bg-zinc-50 dark:bg-zinc-800/60 p-3.5 rounded-2xl border-2 border-zinc-900/10">
+              <p className="font-bold">
+                Folder <code className="font-mono text-indigo-600">/ios-profile</code> telah dibuat di proyek ini berisi templat <code className="font-mono">DuoPlay.mobileconfig</code>.
+              </p>
+              <ol className="list-decimal list-inside space-y-1.5 font-medium">
+                <li>Buka folder <code className="font-mono">/ios-profile</code> di repositori Anda.</li>
+                <li>Unduh atau kirim file <code className="font-mono">DuoPlay.mobileconfig</code> ke iPhone Anda via AirDrop / Email.</li>
+                <li>Di iPhone, buka menu <strong className="text-zinc-900 dark:text-white">Settings (Pengaturan)</strong> &gt; <strong className="text-zinc-900 dark:text-white">Profile Downloaded (Profil Diunduh)</strong>.</li>
+                <li>Ketuk <strong className="text-zinc-900 dark:text-white">Install (Pasang)</strong> untuk memasang Web Clip layar penuh ke Home Screen iPhone Anda.</li>
+              </ol>
+            </div>
+
+            <div className="flex gap-2">
+              <a
+                href="/ios-profile/DuoPlay.mobileconfig"
+                download="DuoPlay.mobileconfig"
+                className="flex-1 px-4 py-2.5 rounded-2xl border-2 border-zinc-900 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-[2px_2px_0px_#18181b] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none cursor-pointer flex items-center justify-center gap-2 transition-all text-center"
+              >
+                <Smartphone className="w-4 h-4" />
+                <span>Unduh DuoPlay.mobileconfig</span>
+              </a>
+              <button
+                onClick={() => setShowIosInstallModal(false)}
+                className="px-4 py-2.5 rounded-2xl border-2 border-zinc-900 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-800 dark:text-zinc-200 font-bold text-xs cursor-pointer"
+              >
+                Tutup
               </button>
             </div>
           </div>
